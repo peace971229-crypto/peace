@@ -748,11 +748,16 @@ function runLive(b,mySide,done){
   else if(e.type==='buff'){const t=ctr(e.u);ftxt(t.x,t.y,e.txt,'heal')}
   else if(e.type==='aoe'){const t=ctr(e.tg),d=document.createElement('div');d.className='burst';d.style.left=t.x+'px';d.style.top=t.y+'px';fx.appendChild(d);setTimeout(()=>d.remove(),500)}}};
  let last=performance.now(),acc=0;
- const fin=()=>{G.animating=false;done();if(G.pendingState){const s=G.pendingState;G.pendingState=null;applyState(s)}};
- const frame=now=>{const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt*G.speed;if(G.skip){b.run();q.length=0}
+ let finished=false,wd=null;
+ const fin=()=>{if(finished)return;finished=true;clearInterval(wd);G.animating=false;done();if(G.pendingState){const s=G.pendingState;G.pendingState=null;applyState(s)}};
+ // 分頁在背景時瀏覽器會暫停動畫：直接算完結果，避免其他玩家卡住
+ const bg=()=>{if(finished)return;b.run();q.length=0;draw();setTimeout(fin,200)};
+ const frame=now=>{if(finished)return;if(document.hidden){bg();return}
+  const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt*G.speed;if(G.skip){b.run();q.length=0}
   while(acc>=DT&&!b.over){b.step();acc-=DT}draw();flush();
   if(b.over){setTimeout(fin,G.skip?250:1100);return}requestAnimationFrame(frame)};
- requestAnimationFrame(frame);
+ wd=setInterval(()=>{if(document.hidden)bg()},700);
+ if(document.hidden)bg();else requestAnimationFrame(frame);
 }
 
 /* ==================== 連機（房主權威：房主跑規則，其他人送動作、收狀態） ==================== */
